@@ -60,8 +60,8 @@ Komunikacja odbywa się za pośrednictwem **asynchronicznych zapytań HTTP** do 
 ### Krok 1: Konfiguracja Backendu
 1.  Sklonuj repozytorium:
     ```bash
-    git clone 
-    cd 
+    git clone https://github.com/Julekoski/Serty-Zadanie.git
+    cd Serty-Zadanie
     ```
 2.  Stwórz i aktywuj wirtualne środowisko:
     ```bash
@@ -93,5 +93,6 @@ Komunikacja odbywa się za pośrednictwem **asynchronicznych zapytań HTTP** do 
 1.  Otwórz folder projektu w VS Code.
 2.  Kliknij prawym przyciskiem myszy na plik `index.html`.
 3.  Wybierz opcję **"Open with Live Server"**.
+
 
 Aplikacja otworzy się w przeglądarce i będzie w pełni funkcjonalna.
