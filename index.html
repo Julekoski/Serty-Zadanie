@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Generator Podsumowań PDF</title>
+    
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/icon?family=Material+Symbols+Outlined" rel="stylesheet">
+    
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <h1>Podsumuj Plik PDF za Pomocą AI</h1>
+        <form id="uploadForm">
+            <input type="file" id="pdfFile" name="pdfFile" accept="application/pdf">
+            <div id="dropArea" class="file-upload-area" onclick="document.getElementById('pdfFile').click()">
+                <span class="material-symbols-outlined icon-large">upload_file</span>
+                <p class="file-label">Kliknij lub upuść plik <strong>PDF</strong> tutaj</p>
+                <p style="font-size: 0.85em; color: #a0a0a0; margin-top: 5px;">Akceptowalne są wyłącznie pliki w formacie PDF.</p>
+            </div>
+            <div id="fileNameDisplay" class="file-name" style="display: none;">
+                <span class="material-symbols-outlined">description</span>
+                <span id="selectedFileName"></span>
+            </div>
+            <button type="submit" id="submitButton" disabled>
+                <span>Generuj Podsumowanie</span>
+            </button>
+        </form>
+        <div id="summary-output">
+            </div>
+    </div>
+
+    <script>
+        // General front-end logic
+
+        const uploadForm = document.getElementById('uploadForm');
+        const pdfFileInput = document.getElementById('pdfFile');
+        const submitButton = document.getElementById('submitButton');
+        const fileNameDisplay = document.getElementById('fileNameDisplay');
+        const selectedFileName = document.getElementById('selectedFileName');
+        const summaryOutput = document.getElementById('summary-output');
+        const dropArea = document.getElementById('dropArea');
+
+        // Drag and drop functionality
+        ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+            dropArea.addEventListener(eventName, e => {
+                e.preventDefault();
+                e.stopPropagation();
+            });
+        });
+        ['dragenter', 'dragover'].forEach(eventName => {
+            dropArea.addEventListener(eventName, () => {
+                dropArea.style.borderColor = '#3498db';
+                dropArea.style.backgroundColor = '#f0f8ff';
+            });
+        });
+        ['dragleave', 'drop'].forEach(eventName => {
+            dropArea.addEventListener(eventName, () => {
+                dropArea.style.borderColor = '#e0e0e0';
+                dropArea.style.backgroundColor = '#fcfcfc';
+            });
+        });
+        dropArea.addEventListener('drop', e => {
+            pdfFileInput.files = e.dataTransfer.files;
+            pdfFileInput.dispatchEvent(new Event('change'));
+        });
+
+        // Button activation logic
+        pdfFileInput.addEventListener('change', () => {
+            if (pdfFileInput.files.length > 0) {
+                selectedFileName.textContent = pdfFileInput.files[0].name;
+                fileNameDisplay.style.display = 'flex';
+                submitButton.disabled = false; // Activate button
+            } else {
+                fileNameDisplay.style.display = 'none';
+                submitButton.disabled = true; // Deactivate button
+            }
+        });
+
+        // Form logic
+        uploadForm.addEventListener('submit', async (event) => {
+            event.preventDefault();
+            const file = pdfFileInput.files[0];
+            if (!file) return; 
+
+            submitButton.disabled = true;
+            submitButton.innerHTML = `<span class="loader"></span><span>Przetwarzanie...</span>`;
+            summaryOutput.style.display = 'none';
+            summaryOutput.classList.remove('error-message');
+
+            const formData = new FormData();
+            formData.append('pdfFile', file);
+
+            try {
+                const response = await fetch('http://127.0.0.1:5000/api/summarize', {
+                    method: 'POST',
+                    body: formData,
+                });
+                const result = await response.json();
+                if (!response.ok) {
+                    throw new Error(result.error || 'Wystąpił nieznany błąd serwera.');
+                }
+                
+                // Display output with additional action buttons
+                summaryOutput.innerHTML = `
+                    <p class="summary-title">Wygenerowane Podsumowanie</p>
+                    <p id="summaryText">${result.summary}</p>
+                    <div class="summary-footer">
+                        <button id="copyButton" class="copy-btn">
+                            <span class="material-symbols-outlined">content_copy</span>
+                            <span>Kopiuj</span>
+                        </button>
+                        <button id="clearButton" class="clear-btn">
+                            <span class="material-symbols-outlined">delete</span>
+                            <span>Wyczyść</span>
+                        </button>
+                    </div>
+                `;
+                summaryOutput.style.display = 'block';
+
+                // Buttons logic
+                const copyButton = document.getElementById('copyButton');
+                const clearButton = document.getElementById('clearButton');
+                const summaryText = document.getElementById('summaryText');
+
+                copyButton.addEventListener('click', () => {
+                    navigator.clipboard.writeText(summaryText.textContent).then(() => {
+                        copyButton.innerHTML = `<span class="material-symbols-outlined">check</span><span>Skopiowano!</span>`;
+                        copyButton.classList.add('copied');
+                        setTimeout(() => {
+                            copyButton.innerHTML = `<span class="material-symbols-outlined">content_copy</span><span>Kopiuj</span>`;
+                            copyButton.classList.remove('copied');
+                        }, 2000);
+                    });
+                });
+
+                clearButton.addEventListener('click', () => {
+                    summaryOutput.style.display = 'none';
+                    fileNameDisplay.style.display = 'none';
+                    pdfFileInput.value = null;
+                    submitButton.disabled = true; 
+                });
+
+            } catch (error) {
+                console.error('Błąd:', error);
+                summaryOutput.innerHTML = `<p class="summary-title">Błąd</p> ${error.message}`;
+                summaryOutput.classList.add('error-message');
+                summaryOutput.style.display = 'block';
+            } finally {
+                submitButton.disabled = false;
+                submitButton.innerHTML = `<span>Generuj Podsumowanie</span>`;
+                
+                if (pdfFileInput.files.length === 0) {
+                    submitButton.disabled = true;
+                }
+            }
+        });
+    </script>
+</body>
+</html>
